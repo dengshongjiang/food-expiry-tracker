@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>家庭食物保质期 · 安装到手机</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --brand: #2d8a5a;
+    --brand-d: #1f6b45;
+    --text: #1f2d3d;
+    --muted: #6b7a8d;
+    --line: #e6ebf1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); padding: 24px 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 28px 22px; box-shadow: 0 6px 24px rgba(31,45,61,.06);
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; color: var(--brand-d); }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+  .qr-box {
+    width: 240px; height: 240px; margin: 0 auto 18px; border-radius: 14px;
+    border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    background: #fff; overflow: hidden;
+  }
+  .qr-box img { width: 220px; height: 220px; }
+  .hint { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .url-pill {
+    display: block; text-align: center; background: #eef6f1; color: var(--brand-d);
+    border: 1px dashed var(--brand); border-radius: 10px; padding: 10px 12px;
+    font-size: 13px; word-break: break-all; text-decoration: none; margin-bottom: 24px;
+  }
+  .step-title { font-weight: 700; margin: 18px 0 8px; color: var(--text); font-size: 15px; }
+  .step-title .badge {
+    display: inline-block; background: var(--brand); color: #fff; font-size: 12px;
+    border-radius: 6px; padding: 2px 8px; margin-right: 8px; vertical-align: middle;
+  }
+  ol { margin: 0; padding-left: 0; list-style: none; counter-reset: s; }
+  ol li { position: relative; padding: 8px 0 8px 30px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  ol li:last-child { border-bottom: none; }
+  ol li::before {
+    counter-increment: s; content: counter(s); position: absolute; left: 0; top: 9px;
+    width: 20px; height: 20px; background: var(--brand); color: #fff; border-radius: 50%;
+    font-size: 12px; text-align: center; line-height: 20px;
+  }
+  .note { font-size: 12px; color: var(--muted); margin-top: 16px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🥫 家庭食物保质期</h1>
+    <div class="sub">扫码或点击链接，把应用安装到手机主屏</div>
+
+    <div class="qr-box" id="qr"><span style="color:#9aa7b5;font-size:13px">二维码加载中…</span></div>
+    <div class="hint">用手机相机或微信「扫一扫」扫描上方二维码</div>
+
+    <a class="url-pill" id="url" href="https://dengshongjiang.github.io/food-expiry-tracker/">https://dengshongjiang.github.io/food-expiry-tracker/</a>
+
+    <div class="step-title"><span class="badge">iOS</span>iPhone 安装步骤</div>
+    <ol>
+      <li>用 Safari 打开上面的链接（或扫码后点开）。</li>
+      <li>点击底部中间的「分享」按钮（方框带向上箭头）。</li>
+      <li>向上滑动，选择「添加到主屏幕」。</li>
+      <li>点「添加」，应用图标即出现在主屏，点开即全屏运行、可离线。</li>
+    </ol>
+
+    <div class="step-title"><span class="badge">Android</span>安卓安装步骤</div>
+    <ol>
+      <li>用 Chrome 打开上面的链接（或扫码后点开）。</li>
+      <li>地址栏右侧会出现「安装应用 / 添加到主屏幕」图标，点击它。</li>
+      <li>确认「安装」，桌面即生成应用图标。</li>
+      <li>若未弹出提示：点右上角 ⋮ 菜单 →「安装应用」。</li>
+    </ol>
+
+    <div class="note">提示：数据保存在本机浏览器中。换手机或清缓存前，请在应用内「数据管理 → 导出」备份。</div>
+  </div>
+  <footer>本页可分享给家人，一起管理食物保质期 🌿</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script>
+  (function () {
+    var url = "https://dengshongjiang.github.io/food-expiry-tracker/";
+    var box = document.getElementById("qr");
+    try {
+      if (typeof QRCode !== "undefined") {
+        box.innerHTML = "";
+        new QRCode(box, { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      } else {
+        box.innerHTML = '<span style="color:#c0392b;font-size:12px">二维码库加载失败，请直接点击上方链接</span>';
+      }
+    } catch (e) {
+      box.innerHTML = '<span style="color:#c0392b;font-size:12px">请直接点击上方链接打开</span>';
+    }
+  })();
+</script>
+</body>
+</html>
