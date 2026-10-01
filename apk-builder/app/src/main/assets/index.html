@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#2f9e6f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="食物保质期" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+<title>家庭食物保质期管理</title>
+<style>
+  :root {
+    --bg: #f4f7f5;
+    --panel: #ffffff;
+    --border: #e3e9e5;
+    --text: #2c3a33;
+    --muted: #7c8b83;
+    --primary: #2f9e6f;
+    --primary-d: #247a55;
+    --expired: #e0524d;
+    --urgent: #f08a24;
+    --soon: #e6c019;
+    --warn: #4a90d9;
+    --safe: #2f9e6f;
+    --shadow: 0 2px 10px rgba(40,70,55,.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 18px 16px 70px; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+  }
+  header.top h1 { font-size: 22px; margin: 0; letter-spacing: .5px; }
+  header.top .sub { color: var(--muted); font-size: 13px; }
+  .btn {
+    border: none; border-radius: 8px; padding: 9px 14px; font-size: 14px;
+    cursor: pointer; background: var(--primary); color: #fff; font-weight: 600;
+    transition: background .15s;
+  }
+  .btn:hover { background: var(--primary-d); }
+  .btn.ghost { background: #fff; color: var(--primary-d); border: 1px solid var(--border); }
+  .btn.ghost:hover { background: #f0f6f3; }
+  .btn.sm { padding: 6px 11px; font-size: 13px; }
+  .btn.danger { background: #fff; color: var(--expired); border: 1px solid #f3c4c2; }
+  .btn.danger:hover { background: #fdeceb; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 10px; text-align: center; box-shadow: var(--shadow);
+  }
+  .card .num { font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .card .lab { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card.expired .num { color: var(--expired); }
+  .card.urgent  .num { color: var(--urgent); }
+  .card.soon    .num { color: var(--soon); }
+  .card.warn    .num { color: var(--warn); }
+
+  .section { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .section h2 { font-size: 15px; margin: 0 0 12px; }
+  .barrow { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .barrow .name { width: 120px; font-size: 13px; flex-shrink: 0; }
+  .barrow .track { flex: 1; background: #eef3f0; border-radius: 6px; height: 22px; overflow: hidden; }
+  .barrow .fill { height: 100%; border-radius: 6px; transition: width .3s; }
+  .barrow .cnt { width: 46px; text-align: right; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+
+  /* 待提醒面板 */
+  .due-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .due-item:last-child { border-bottom: none; }
+  .due-item .nm { font-weight: 600; }
+  .due-item .meta { font-size: 12px; color: var(--muted); }
+  .due-item .tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 20px; white-space: nowrap; }
+  .tag-expired { background: #fdeceb; color: var(--expired); }
+  .tag-warn { background: #fdf0e3; color: var(--urgent); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .toolbar input, .toolbar select {
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff; color: var(--text);
+  }
+  .toolbar input[type=text] { flex: 1; min-width: 160px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  tbody tr:hover { background: #fafcfb; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .b-expired { background: #fdeceb; color: var(--expired); }
+  .b-urgent  { background: #fdf0e3; color: var(--urgent); }
+  .b-soon    { background: #fbf6dd; color: #9a8200; }
+  .b-warn    { background: #eaf2fb; color: var(--warn); }
+  .b-safe    { background: #e7f5ee; color: var(--safe); }
+  .muted { color: var(--muted); }
+  .row-actions { display: flex; gap: 6px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 0; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(20,40,30,.4); display: none; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow: auto; z-index: 50; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #fff; border-radius: 14px; width: 100%; max-width: 480px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal h3 { margin: 0 0 16px; font-size: 17px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .preview { font-size: 13px; color: var(--primary-d); margin-top: 4px; min-height: 18px; }
+  .checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); padding-top: 8px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .perm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f6faf8; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+  .perm-row .st { font-size: 13px; font-weight: 600; }
+  .st-on { color: var(--safe); }
+  .st-off { color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .barrow .name { width: 84px; }
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>家庭食物保质期管理</h1>
+      <div class="sub">记录生产日期与保质期，自动算到期日，按剩余月份统计并到期前提醒</div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn ghost sm" id="btnRemind">提醒设置</button>
+      <button class="btn ghost sm" id="btnExport">导出</button>
+      <button class="btn ghost sm" id="btnImport">导入</button>
+      <button class="btn" id="btnAdd">+ 添加食物</button>
+    </div>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="section">
+    <h2>按剩余月份统计（将过期食物分布）</h2>
+    <div id="statsByMonth"></div>
+  </div>
+
+  <div class="section" id="dueSection">
+    <h2>待提醒（临期 / 已过期）<span class="muted" id="dueCount" style="font-weight:400;font-size:13px;"></span></h2>
+    <div id="dueList"></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="搜索食物名称 / 备注 / 存放位置" />
+    <select id="filterCategory"><option value="">全部分类</option></select>
+    <select id="filterStatus">
+      <option value="">全部状态</option>
+      <option value="expired">已过期</option>
+      <option value="urgent">1个月内</option>
+      <option value="soon">1-3个月</option>
+      <option value="warn">3-6个月</option>
+      <option value="safe">6个月以上</option>
+    </select>
+    <select id="sortBy">
+      <option value="expiry">按到期日（近→远）</option>
+      <option value="remaining">按剩余时间（少→多）</option>
+      <option value="name">按名称</option>
+      <option value="created">按录入时间（新→旧）</option>
+    </select>
+  </div>
+
+  <div class="section" style="padding:0; overflow:hidden;">
+    <table>
+      <thead>
+        <tr>
+          <th>食物名称</th>
+          <th class="hide-sm">分类</th>
+          <th>生产日期</th>
+          <th>保质期</th>
+          <th>到期日期</th>
+          <th>剩余</th>
+          <th>状态</th>
+          <th class="hide-sm">存放</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyTip" style="display:none;">暂无数据，点击右上角「添加食物」开始记录</div>
+  </div>
+</div>
+
+<!-- 添加/编辑 弹窗 -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">添加食物</h3>
+    <input type="hidden" id="f_id" />
+    <div class="field">
+      <label>食物名称 *</label>
+      <input type="text" id="f_name" placeholder="如：纯牛奶" />
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>分类</label>
+        <select id="f_category"></select>
+      </div>
+      <div class="field">
+        <label>数量 / 规格</label>
+        <input type="text" id="f_quantity" placeholder="如：2盒 / 1袋" />
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>生产日期 *</label>
+        <input type="date" id="f_production" />
+      </div>
+      <div class="field">
+        <label>存放位置</label>
+        <input type="text" id="f_location" placeholder="如：冰箱冷藏" />
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>保质期数值 *</label>
+        <input type="number" id="f_shelflife" min="1" step="1" placeholder="如：180" />
+      </div>
+      <div class="field">
+        <label>保质期单位</label>
+        <select id="f_unit">
+          <option value="day">天</option>
+          <option value="month">个月</option>
+          <option value="year">年</option>
+        </select>
+      </div>
+    </div>
+    <div class="preview" id="expiryPreview"></div>
+    <div class="grid2">
+      <div class="field">
+        <label>提前提醒天数（留空用全局设置）</label>
+        <input type="number" id="f_remind" min="0" step="1" placeholder="默认 7" />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <label class="checkbox-row"><input type="checkbox" id="f_muted" /> 不提醒此项</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>备注</label>
+      <input type="text" id="f_note" placeholder="可选" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancel">取消</button>
+      <button class="btn" id="btnSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 提醒设置 弹窗 -->
+<div class="modal-bg" id="modalRemind">
+  <div class="modal">
+    <h3>提醒设置</h3>
+    <div class="perm-row">
+      <div>
+        <div style="font-weight:600;">系统通知</div>
+        <div class="hint">到期前会弹出系统通知（需在浏览器授权）</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="st" id="permStatus">未开启</div>
+        <button class="btn sm" id="btnTogglePerm" style="margin-top:6px;">开启通知</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>全局提前提醒天数（默认 7 天）</label>
+      <input type="number" id="s_global" min="0" step="1" value="7" />
+      <div class="hint">某项单独设置后会覆盖此值；已过期食物始终提醒。</div>
+    </div>
+    <div class="field">
+      <button class="btn ghost sm" id="btnTestNotify">发送测试通知</button>
+    </div>
+    <div class="hint" style="margin-top:6px;">
+      说明：网页通知在「应用打开时」生效；将本应用「添加到主屏幕」后，每天打开即可收到临期提醒。后台定时推送需要服务器支持，本版为纯本地离线应用。
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="btnSaveRemind">完成</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json" style="display:none" />
+
+<script>
+(function () {
+  "use strict";
+  var STORE_KEY = "food_expiry_tracker_v1";
+  var SET_KEY = "food_settings_v1";
+  var CATEGORIES = ["乳制品", "肉禽蛋", "粮油米面", "生鲜蔬果", "零食饮料", "速冻食品", "调料酱料", "其他"];
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function fmt(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function todayMidnight() { var d = new Date(); d.setHours(0,0,0,0); return d; }
+  function parseDate(s) { if (!s) return null; var p = s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+
+  function addDuration(date, value, unit) {
+    var d = new Date(date.getTime());
+    if (unit === "day") d.setDate(d.getDate() + value);
+    else if (unit === "month") d.setMonth(d.getMonth() + value);
+    else if (unit === "year") d.setFullYear(d.getFullYear() + value);
+    return d;
+  }
+  function computeExpiry(item) {
+    var p = parseDate(item.productionDate);
+    if (!p) return null;
+    return addDuration(p, item.shelfLifeValue, item.shelfLifeUnit);
+  }
+  function daysRemaining(expiry) { return Math.round((expiry - todayMidnight()) / 86400000); }
+  function monthsRemaining(expiry) { return (expiry - todayMidnight()) / (30.4375 * 86400000); }
+  function statusOf(m) {
+    if (m < 0) return "expired";
+    if (m < 1) return "urgent";
+    if (m < 3) return "soon";
+    if (m < 6) return "warn";
+    return "safe";
+  }
+  var STATUS_LABEL = { expired: "已过期", urgent: "1个月内", soon: "1-3个月", warn: "3-6个月", safe: "6个月以上" };
+  var STATUS_CLASS = { expired: "b-expired", urgent: "b-urgent", soon: "b-soon", warn: "b-warn", safe: "b-safe" };
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- storage ----------
+  function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; } }
+  function save(list) { localStorage.setItem(STORE_KEY, JSON.stringify(list)); }
+  var items = load();
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function loadSettings() { try { return JSON.parse(localStorage.getItem(SET_KEY)) || {}; } catch (e) { return {}; } }
+  var settings = loadSettings();
+  if (settings.globalRemindDays == null) settings.globalRemindDays = 7;
+  if (settings.notificationsEnabled == null) settings.notificationsEnabled = false;
+  function saveSettings() { localStorage.setItem(SET_KEY, JSON.stringify(settings)); }
+
+  function remindDaysFor(item) {
+    if (item.remindDays != null && item.remindDays !== "" && !isNaN(+item.remindDays)) return +item.remindDays;
+    return settings.globalRemindDays;
+  }
+
+  // ---------- notification ----------
+  function notifSupported() { return ("Notification" in window); }
+  function refreshPermUI() {
+    var st = $("permStatus"), btn = $("btnTogglePerm");
+    if (!notifSupported()) { st.textContent = "浏览器不支持"; st.className = "st st-off"; btn.disabled = true; btn.textContent = "不可用"; return; }
+    if (Notification.permission === "granted") {
+      st.textContent = "已开启"; st.className = "st st-on";
+      btn.textContent = "关闭通知"; settings.notificationsEnabled = true; saveSettings();
+    } else {
+      st.textContent = "未开启"; st.className = "st st-off";
+      btn.textContent = "开启通知"; settings.notificationsEnabled = false; saveSettings();
+    }
+  }
+  function togglePermission() {
+    if (!notifSupported()) { alert("当前浏览器不支持系统通知"); return; }
+    if (Notification.permission === "granted") {
+      // 无法以代码撤销授权，引导用户手动关闭
+      alert("已授权。如需关闭，请在浏览器站点设置中撤销本网站的通知权限。");
+      refreshPermUI();
+      return;
+    }
+    Notification.requestPermission().then(function (p) {
+      refreshPermUI();
+      if (p === "granted") { settings.notificationsEnabled = true; saveSettings(); checkReminders(true); }
+      else alert("未授权通知，将仅显示应用内「待提醒」列表。");
+    });
+  }
+  function showNotification(title, body) {
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) reg.showNotification(title, { body: body, icon: "icon-192.png", badge: "icon-192.png" });
+          else fallbackNotify(title, body);
+        });
+      } else fallbackNotify(title, body);
+    } catch (e) { fallbackNotify(title, body); }
+  }
+  function fallbackNotify(t, b) {
+    if (notifSupported() && Notification.permission === "granted") { try { new Notification(t, { body: b, icon: "icon-192.png" }); } catch (e) {} }
+  }
+
+  // ---------- enrich / render ----------
+  function enrich(item) {
+    var expiry = computeExpiry(item);
+    var m = monthsRemaining(expiry);
+    return { item: item, expiry: expiry, days: daysRemaining(expiry), months: m, status: statusOf(m) };
+  }
+
+  function renderCards() {
+    var list = items.map(enrich);
+    var total = list.length;
+    var c = { expired: 0, urgent: 0, soon: 0, warn: 0 };
+    list.forEach(function (r) {
+      if (r.status === "expired") c.expired++;
+      else if (r.status === "urgent") c.urgent++;
+      else if (r.status === "soon") c.soon++;
+      else if (r.status === "warn") c.warn++;
+    });
+    $("cards").innerHTML = card(total, "食物总数", "") + card(c.expired, "已过期", "expired")
+      + card(c.urgent, "1个月内", "urgent") + card(c.soon, "1-3个月", "soon") + card(c.warn, "3-6个月", "warn");
+  }
+  function card(num, lab, cls) {
+    return '<div class="card ' + cls + '"><div class="num">' + num + '</div><div class="lab">' + lab + '</div></div>';
+  }
+
+  function renderStatsByMonth() {
+    var groups = [
+      { key: "expired", name: "已过期（剩余<0月）", color: "var(--expired)" },
+      { key: "m1", name: "1个月内到期", color: "var(--urgent)" },
+      { key: "m3", name: "1-3个月内到期", color: "var(--soon)" },
+      { key: "m6", name: "3-6个月内到期", color: "var(--warn)" },
+      { key: "m6p", name: "6个月以上", color: "var(--safe)" }
+    ];
+    var counts = { expired: 0, m1: 0, m3: 0, m6: 0, m6p: 0 };
+    items.map(enrich).forEach(function (r) {
+      if (r.status === "expired") counts.expired++;
+      else if (r.status === "urgent") counts.m1++;
+      else if (r.status === "soon") counts.m3++;
+      else if (r.status === "warn") counts.m6++;
+      else counts.m6p++;
+    });
+    var max = Math.max(1, counts.expired, counts.m1, counts.m3, counts.m6, counts.m6p);
+    $("statsByMonth").innerHTML = groups.map(function (g) {
+      var n = counts[g.key], pct = Math.round((n / max) * 100);
+      return '<div class="barrow"><div class="name">' + g.name + '</div>'
+        + '<div class="track"><div class="fill" style="width:' + pct + '%;background:' + g.color + '"></div></div>'
+        + '<div class="cnt">' + n + '</div></div>';
+    }).join("");
+  }
+
+  function renderTable() {
+    var q = $("search").value.trim().toLowerCase();
+    var fc = $("filterCategory").value, fs = $("filterStatus").value, sort = $("sortBy").value;
+    var list = items.map(enrich).filter(function (r) {
+      if (fc && r.item.category !== fc) return false;
+      if (fs && r.status !== fs) return false;
+      if (q) { var hay = (r.item.name + " " + (r.item.note || "") + " " + (r.item.location || "")).toLowerCase(); if (hay.indexOf(q) === -1) return false; }
+      return true;
+    });
+    list.sort(function (a, b) {
+      if (sort === "expiry") return a.expiry - b.expiry;
+      if (sort === "remaining") return a.days - b.days;
+      if (sort === "name") return a.item.name.localeCompare(b.item.name, "zh");
+      if (sort === "created") return (b.item.createdAt || "").localeCompare(a.item.createdAt || "");
+      return 0;
+    });
+    if (list.length === 0) { $("tbody").innerHTML = ""; $("emptyTip").style.display = "block"; return; }
+    $("emptyTip").style.display = "none";
+    var unitText = { day: "天", month: "个月", year: "年" };
+    $("tbody").innerHTML = list.map(function (r) {
+      var it = r.item;
+      var remainTxt = r.days < 0 ? ("已过期 " + Math.abs(r.days) + " 天") : (r.days + " 天 / 约 " + r.months.toFixed(1) + " 月");
+      return "<tr>"
+        + "<td>" + esc(it.name) + (it.quantity ? ' <span class="muted">(' + esc(it.quantity) + ")</span>" : "") + "</td>"
+        + '<td class="hide-sm">' + esc(it.category || "其他") + "</td>"
+        + "<td>" + esc(it.productionDate) + "</td>"
+        + "<td>" + it.shelfLifeValue + " " + unitText[it.shelfLifeUnit] + "</td>"
+        + "<td>" + fmt(r.expiry) + "</td>"
+        + "<td>" + remainTxt + "</td>"
+        + '<td><span class="badge ' + STATUS_CLASS[r.status] + '">' + STATUS_LABEL[r.status] + "</span></td>"
+        + '<td class="hide-sm">' + (it.location ? esc(it.location) : '<span class="muted">-</span>') + "</td>"
+        + '<td><div class="row-actions">'
+          + '<button class="btn ghost sm" onclick="App.edit(\'' + it.id + '\')">编辑</button>'
+          + '<button class="btn danger sm" onclick="App.remove(\'' + it.id + '\')">删除</button>'
+        + "</div></td></tr>";
+    }).join("");
+  }
+
+  function renderDuePanel() {
+    var today = fmt(todayMidnight());
+    var due = [];
+    items.forEach(function (it) {
+      if (it.muted) return;
+      var exp = computeExpiry(it); if (!exp) return;
+      var d = daysRemaining(exp);
+      if (d <= remindDaysFor(it)) due.push({ it: it, days: d, exp: exp });
+    });
+    due.sort(function (a, b) { return a.days - b.days; });
+    $("dueCount").textContent = due.length ? ("（" + due.length + " 项）") : "";
+    if (!due.length) { $("dueList").innerHTML = '<div class="empty" style="padding:14px 0;">暂无临期食物，保持得不错！</div>'; return; }
+    $("dueList").innerHTML = due.map(function (x) {
+      var expired = x.days < 0;
+      var tag = expired ? '<span class="tag tag-expired">已过期 ' + Math.abs(x.days) + ' 天</span>'
+                        : '<span class="tag tag-warn">还剩 ' + x.days + ' 天</span>';
+      var meta = "到期 " + fmt(x.exp) + (x.it.location ? " · " + esc(x.it.location) : "");
+      return '<div class="due-item"><div><div class="nm">' + esc(x.it.name) + '</div><div class="meta">' + meta + '</div></div>' + tag + '</div>';
+    }).join("");
+  }
+
+  function renderAll() { renderCards(); renderStatsByMonth(); renderTable(); renderDuePanel(); }
+
+  // ---------- reminders ----------
+  function checkReminders(forceNotify) {
+    renderDuePanel();
+    if (!settings.notificationsEnabled || !notifSupported() || Notification.permission !== "granted") return;
+    var today = fmt(todayMidnight());
+    var fired = 0;
+    items.forEach(function (it) {
+      if (it.muted) return;
+      var exp = computeExpiry(it); if (!exp) return;
+      var d = daysRemaining(exp);
+      if (d <= remindDaysFor(it) && it.lastNotified !== today) {
+        var txt = d < 0 ? ("已过期 " + Math.abs(d) + " 天，到期 " + fmt(exp))
+                        : ("还剩 " + d + " 天，到期 " + fmt(exp));
+        if (forceNotify || fired < 3) { showNotification("食物临期提醒：" + it.name, txt); fired++; }
+        it.lastNotified = today;
+      }
+    });
+    if (fired) save(items);
+  }
+
+  // ---------- category selects ----------
+  function fillCategorySelects() {
+    var sel = $("f_category"), cur = sel.value;
+    sel.innerHTML = CATEGORIES.map(function (c) { return '<option value="' + c + '">' + c + "</option>"; }).join("");
+    if (cur) sel.value = cur;
+    $("filterCategory").innerHTML = '<option value="">全部分类</option>' + CATEGORIES.map(function (c) { return '<option value="' + c + '">' + c + "</option>"; }).join("");
+  }
+
+  // ---------- modal: add/edit ----------
+  function openModal(item) {
+    $("modalTitle").textContent = item ? "编辑食物" : "添加食物";
+    $("f_id").value = item ? item.id : "";
+    $("f_name").value = item ? item.name : "";
+    $("f_category").value = item ? item.category : CATEGORIES[0];
+    $("f_quantity").value = item ? (item.quantity || "") : "";
+    $("f_production").value = item ? item.productionDate : fmt(todayMidnight());
+    $("f_location").value = item ? (item.location || "") : "";
+    $("f_shelflife").value = item ? item.shelfLifeValue : "";
+    $("f_unit").value = item ? item.shelfLifeUnit : "day";
+    $("f_remind").value = (item && item.remindDays != null && item.remindDays !== "") ? item.remindDays : "";
+    $("f_muted").checked = !!(item && item.muted);
+    $("f_note").value = item ? (item.note || "") : "";
+    updatePreview();
+    $("modalBg").classList.add("show");
+  }
+  function closeModal() { $("modalBg").classList.remove("show"); }
+  function updatePreview() {
+    var p = $("f_production").value, v = +$("f_shelflife").value, u = $("f_unit").value;
+    if (!p || !v) { $("expiryPreview").textContent = ""; return; }
+    var exp = addDuration(parseDate(p), v, u);
+    var d = daysRemaining(exp);
+    var tail = d < 0 ? ("（已过期 " + Math.abs(d) + " 天）") : ("（还剩 " + d + " 天）");
+    $("expiryPreview").textContent = "预计到期日期：" + fmt(exp) + tail;
+  }
+  function saveItem() {
+    var name = $("f_name").value.trim();
+    var p = $("f_production").value;
+    var v = +$("f_shelflife").value;
+    if (!name) { alert("请填写食物名称"); return; }
+    if (!p) { alert("请选择生产日期"); return; }
+    if (!v || v <= 0) { alert("请填写有效的保质期"); return; }
+    var id = $("f_id").value;
+    var remindVal = $("f_remind").value.trim();
+    var data = {
+      id: id || uid(),
+      name: name,
+      category: $("f_category").value,
+      quantity: $("f_quantity").value.trim(),
+      productionDate: p,
+      location: $("f_location").value.trim(),
+      shelfLifeValue: v,
+      shelfLifeUnit: $("f_unit").value,
+      remindDays: (remindVal === "") ? null : (+remindVal),
+      muted: $("f_muted").checked,
+      note: $("f_note").value.trim(),
+      createdAt: id ? undefined : new Date().toISOString()
+    };
+    if (id) {
+      var idx = items.findIndex(function (x) { return x.id === id; });
+      if (idx >= 0) { data.createdAt = items[idx].createdAt; data.lastNotified = items[idx].lastNotified; items[idx] = data; }
+    } else { items.push(data); }
+    save(items);
+    closeModal();
+    renderAll();
+    checkReminders(false);
+  }
+  function removeItem(id) {
+    var it = items.find(function (x) { return x.id === id; });
+    if (!it) return;
+    if (!confirm("确定删除「" + it.name + "」吗？")) return;
+    items = items.filter(function (x) { return x.id !== id; });
+    save(items); renderAll();
+  }
+  function editItem(id) { var it = items.find(function (x) { return x.id === id; }); if (it) openModal(it); }
+
+  // ---------- reminders modal ----------
+  function openRemind() {
+    $("s_global").value = settings.globalRemindDays;
+    refreshPermUI();
+    $("modalRemind").classList.add("show");
+  }
+  function closeRemind() { $("modalRemind").classList.remove("show"); }
+
+  // ---------- import / export ----------
+  function exportData() {
+    var blob = new Blob([JSON.stringify({ items: items, settings: settings }, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "食物保质期备份_" + fmt(todayMidnight()) + ".json"; a.click();
+    URL.revokeObjectURL(url);
+  }
+  function importData(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        var arr = Array.isArray(data) ? data : data.items;
+        if (!Array.isArray(arr)) throw new Error("格式错误");
+        arr.forEach(function (x) {
+          if (!x.id) x.id = uid();
+          if (!x.createdAt) x.createdAt = new Date().toISOString();
+          if (!x.category) x.category = "其他";
+          if (!x.shelfLifeUnit) x.shelfLifeUnit = "day";
+        });
+        if (!confirm("将导入 " + arr.length + " 条记录，是否覆盖当前数据？（取消则合并去重）")) {
+          var exist = {}; items.forEach(function (x) { exist[x.id] = true; });
+          arr.forEach(function (x) { if (!exist[x.id]) items.push(x); });
+        } else { items = arr; }
+        if (data && data.settings) { settings = Object.assign(settings, data.settings); saveSettings(); }
+        save(items); renderAll(); checkReminders(false);
+        alert("导入成功，共 " + items.length + " 条记录");
+      } catch (e) { alert("导入失败：" + e.message); }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- bind ----------
+  $("btnAdd").onclick = function () { openModal(null); };
+  $("btnCancel").onclick = closeModal;
+  $("btnSave").onclick = saveItem;
+  $("btnRemind").onclick = openRemind;
+  $("btnSaveRemind").onclick = function () {
+    var g = parseInt($("s_global").value, 10);
+    settings.globalRemindDays = isNaN(g) ? 7 : Math.max(0, g);
+    saveSettings(); closeRemind(); renderDuePanel();
+  };
+  $("btnTogglePerm").onclick = togglePermission;
+  $("btnTestNotify").onclick = function () {
+    if (!notifSupported()) { alert("当前浏览器不支持通知"); return; }
+    if (Notification.permission !== "granted") { togglePermission(); return; }
+    showNotification("测试通知", "这是一条来自「食物保质期」的测试提醒，说明通知已正常工作。");
+  };
+  $("btnExport").onclick = exportData;
+  $("btnImport").onclick = function () { $("fileInput").click(); };
+  $("fileInput").onchange = function (e) { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ""; };
+  ["f_production", "f_shelflife", "f_unit"].forEach(function (id) { $(id).addEventListener("input", updatePreview); });
+  $("search").addEventListener("input", renderTable);
+  $("filterCategory").addEventListener("change", renderTable);
+  $("filterStatus").addEventListener("change", renderTable);
+  $("sortBy").addEventListener("change", renderTable);
+  $("modalBg").addEventListener("click", function (e) { if (e.target === $("modalBg")) closeModal(); });
+  $("modalRemind").addEventListener("click", function (e) { if (e.target === $("modalRemind")) closeRemind(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { closeModal(); closeRemind(); }
+  });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) checkReminders(false); });
+
+  window.App = { edit: editItem, remove: removeItem };
+
+  // ---------- service worker ----------
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+
+  // init
+  fillCategorySelects();
+  renderAll();
+  // 打开应用时检查一次提醒（若已授权）
+  if (notifSupported() && Notification.permission === "granted") {
+    settings.notificationsEnabled = true; saveSettings();
+    setTimeout(function () { checkReminders(false); }, 800);
+  }
+})();
+</script>
+</body>
+</html>
